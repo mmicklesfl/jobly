@@ -30,7 +30,9 @@ class Job {
     );
 
     const job = result.rows[0];
-
+    if (job.equity !== null) {
+      job.equity = parseFloat(job.equity);
+    }
     return job;
   }
 
@@ -70,8 +72,14 @@ class Job {
     query += " ORDER BY title";
 
     const jobsRes = await db.query(query, queryValues);
-    return jobsRes.rows;
-  }
+    const jobs = jobsRes.rows.map(job => {
+    if (job.equity !== null) {
+      job.equity = parseFloat(job.equity);
+    }
+    return job;
+  });
+  return jobs;
+}
 
   /** Given a job id, return data about the job.
    *
@@ -86,11 +94,15 @@ class Job {
        WHERE id = $1`,
       [id]
     );
-
+  
     const job = jobRes.rows[0];
-
+  
     if (!job) throw new NotFoundError(`No job: ${id}`);
-
+  
+    if (job.equity !== null) {
+      job.equity = parseFloat(job.equity);
+    }
+  
     return job;
   }
 
@@ -113,17 +125,21 @@ class Job {
         equity: "equity"
       });
     const jobIdIdx = "$" + (values.length + 1);
-
+  
     const querySql = `UPDATE jobs 
                       SET ${setCols} 
                       WHERE id = ${jobIdIdx} 
                       RETURNING id, title, salary, equity, company_handle`;
-
+  
     const result = await db.query(querySql, [...values, id]);
     const job = result.rows[0];
-
+  
     if (!job) throw new NotFoundError(`No job: ${id}`);
-
+  
+    // Apply the conversion for the equity field
+    if (job.equity !== null) {
+      job.equity = parseFloat(job.equity);
+    }
     return job;
   }
 
