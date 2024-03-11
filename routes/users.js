@@ -43,6 +43,23 @@ router.post("/", ensureAdmin, async function (req, res, next) {
   }
 });
 
+/** POST /users/:username/jobs/:id
+ *
+ * Allows a user to apply for a job or an admin to do it for them.
+ *
+ * Returns { applied: jobId }
+ *
+ * Authorization required: same user or admin
+ */
+router.post("/:username/jobs/:id", ensureCorrectUserOrAdmin, async function (req, res, next) {
+  try {
+    const jobId = await User.applyToJob(req.params.username, req.params.id);
+    return res.json({ applied: jobId });
+  } catch (err) {
+    return next(err);
+  }
+});
+
 
 /** GET / => { users: [ {username, firstName, lastName, email }, ... ] }
  *

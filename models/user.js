@@ -125,20 +125,31 @@ class User {
 
   static async get(username) {
     const userRes = await db.query(
-          `SELECT username,
-                  first_name AS "firstName",
-                  last_name AS "lastName",
-                  email,
-                  is_admin AS "isAdmin"
-           FROM users
-           WHERE username = $1`,
-        [username],
+      `SELECT username,
+              first_name AS "firstName",
+              last_name AS "lastName",
+              email,
+              is_admin AS "isAdmin"
+       FROM users
+       WHERE username = $1`,
+      [username],
     );
-
+  
     const user = userRes.rows[0];
-
+  
     if (!user) throw new NotFoundError(`No user: ${username}`);
-
+  
+    // Fetch job IDs the user has applied for
+    const applicationsRes = await db.query(
+      `SELECT job_id
+       FROM applications
+       WHERE username = $1`,
+      [username],
+    );
+  
+    // Extract job IDs and add them to the user object
+    user.jobs = applicationsRes.rows.map(row => row.job_id);
+  
     return user;
   }
 
@@ -204,6 +215,34 @@ class User {
 
     if (!user) throw new NotFoundError(`No user: ${username}`);
   }
+
+  /** Apply for a job
+ *
+ * Accepts a username and a job ID, and creates an application in the database.
+ *
+ * Throws NotFoundError if the user or job doesn't exist.
+ */
+
+static async applyToJob(username, jobId) {
+  // Check if job exists
+  const jobRes = await db.query(
+    `SELECT id
+     FROM jobs
+     WHERE id = $1`, [jobId]);
+  const job = jobRes.rows[0];
+
+  if (!job) throw new NotFoundError(`No job: ${jobId}`);
+
+  // Insert application
+  await db.query(
+    `INSERT INTO applications (username, job_id)
+     VALUES ($1, $2)`,
+    [username, jobId]
+  );
+
+  return jobId;
+}
+
 }
 
 
